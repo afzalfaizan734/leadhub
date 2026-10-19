@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>LeadHub</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%234f4ff0'/%3E%3Cpath d='M3 6h11v9H3z M14 9h4l3 3v3h-7z' fill='none' stroke='white' stroke-width='1.6'/%3E%3C/svg%3E"/>
+<link rel="stylesheet" href="/static/app.css"/>
+</head>
+<body>
+
+<!-- icon sprite -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="ic-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+<symbol id="ic-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+<symbol id="ic-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+<symbol id="ic-layers" viewBox="0 0 24 24"><path d="M12 3 3 8l9 5 9-5z"/><path d="M3 13l9 5 9-5"/></symbol>
+<symbol id="ic-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></symbol>
+<symbol id="ic-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><path d="M16 5.2a3.2 3.2 0 0 1 0 5.6M18 20a5.5 5.5 0 0 0-3-4.9"/></symbol>
+<symbol id="ic-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></symbol>
+<symbol id="ic-phone" viewBox="0 0 24 24"><path d="M6.6 3h3l1.5 5-2 1.2a12 12 0 0 0 5.7 5.7l1.2-2 5 1.5v3a2 2 0 0 1-2.2 2A17 17 0 0 1 4.6 5.2 2 2 0 0 1 6.6 3z"/></symbol>
+<symbol id="ic-mobile" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.4"/><path d="M11 18.5h2"/></symbol>
+<symbol id="ic-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.2"/><path d="m4 7 8 6 8-6"/></symbol>
+<symbol id="ic-check" viewBox="0 0 24 24"><path d="m5 12 4.5 4.5L19 7"/></symbol>
+<symbol id="ic-star" viewBox="0 0 24 24"><path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></symbol>
+<symbol id="ic-ban" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/></symbol>
+<symbol id="ic-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+<symbol id="ic-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="ic-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14-4.5L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14 4.5L20 16"/><path d="M20 20v-4h-4"/></symbol>
+<symbol id="ic-truck" viewBox="0 0 24 24"><path d="M3 6h11v9H3z"/><path d="M14 9h4l3 3v3h-7z"/><circle cx="7" cy="18" r="1.8"/><circle cx="17.5" cy="18" r="1.8"/></symbol>
+<symbol id="ic-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></symbol>
+<symbol id="ic-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></symbol>
+<symbol id="ic-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+<symbol id="ic-inbox" viewBox="0 0 24 24"><path d="M3 13h5l1.5 3h5L21 13M3 13 6 5h12l3 8v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+<symbol id="ic-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+</defs></svg>
+
+<!-- ======================= LOGIN ======================= -->
+<div id="login">
+  <div class="login-brand">
+    <div class="bt"><div class="mark"><svg viewBox="0 0 24 24"><use href="#ic-truck"/></svg></div><b id="brandNameA">LeadHub</b></div>
+    <div>
+      <h2>Work your freshest carriers first.</h2>
+      <p>New operating authorities, enriched and ready to call — with the compliance clock running for you.</p>
+      <div class="login-stats" id="loginStats"></div>
+    </div>
+    <div class="login-foot"><svg class="i sm"><use href="#ic-lock"/></svg> Secured with one-way hashed PINs</div>
+  </div>
+  <div class="login-form">
+    <div id="step1">
+      <h3>Choose your account</h3>
+      <p class="sub" style="margin:4px 0 14px">Select who you are to continue.</p>
+      <div id="demoHint" class="hide" style="margin:0 0 14px;padding:11px 13px;border-radius:12px;background:var(--accent-soft);border:1px solid var(--accent-line);font-size:0.85rem;color:var(--ink-2)"></div>
+      <div class="ulist" id="ulist"></div>
+    </div>
+    <div id="step2" class="hide">
+      <h3>Enter your PIN</h3>
+      <div class="who" style="margin:12px 0 14px"><div class="avatar" id="pinAvatar"></div>
+        <div><b id="pinName"></b><br><span class="sub" id="pinRole"></span></div></div>
+      <div class="pin-row">
+        <input id="pinBox" class="pin-input" type="password" inputmode="numeric" maxlength="12"
+               autocomplete="off" placeholder="••••" aria-label="PIN"/>
+      </div>
+      <div class="err" id="pinErr" role="alert"></div>
+      <div style="display:flex;gap:9px;max-width:300px;margin-top:4px">
+        <button class="btn block" id="btnSignin"><svg><use href="#ic-arrow"/></svg>Sign in</button>
+        <button class="btn sec" id="btnBack">Back</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= APP ======================= -->
+<div id="app" class="hide">
+  <aside class="side">
+    <div class="top"><div class="mark"><svg viewBox="0 0 24 24"><use href="#ic-truck"/></svg></div><b id="brandNameB">LeadHub</b></div>
+    <nav id="navWrap">
+      <a data-view="dash" data-roles="admin"><svg><use href="#ic-grid"/></svg>Dashboard</a>
+      <a data-view="followups" data-roles="admin agent"><svg><use href="#ic-clock"/></svg>Follow-ups<span class="cnt hide" id="fuCount"></span></a>
+      <a data-view="daily" data-roles="admin agent"><svg><use href="#ic-folder"/></svg><span data-label="daily">Daily Folders</span></a>
+      <a data-view="buckets" data-roles="admin"><svg><use href="#ic-layers"/></svg>Lead Groups</a>
+      <a data-view="leads" data-roles="admin agent"><svg><use href="#ic-list"/></svg><span data-label="leads">Leads</span></a>
+      <a data-view="team" data-roles="admin"><svg><use href="#ic-users"/></svg>Team</a>
+    </nav>
+    <div class="foot">
+      <div class="uchip"><div class="avatar" id="uav"></div><div><b id="uname"></b><span id="urole"></span></div></div>
+      <div class="acts">
+        <button id="btnTheme" title="Light / dark"><svg class="i sm" style="display:inline;vertical-align:-3px"><use href="#ic-moon"/></svg></button>
+        <button id="btnPin">PIN</button>
+        <button id="btnLogout">Sign out</button>
+      </div>
+    </div>
+  </aside>
+
+  <main>
+    <div class="topbar">
+      <h2 id="pageTitle">Dashboard</h2>
+      <span class="sp"></span>
+      <div class="cmdk" id="cmdk"><svg class="i sm"><use href="#ic-search"/></svg>Search leads…<kbd>/</kbd></div>
+      <button class="btn sec sm" id="btnText" title="Text size (Normal / Large / Largest)" aria-label="Change text size"><b style="font-size:0.85em">A</b><b style="font-size:1.1em">A</b></button>
+      <button class="btn sec sm" id="btnRefresh"><svg><use href="#ic-refresh"/></svg>Refresh</button>
+    </div>
+    <div class="wrap">
+
+      <!-- DASHBOARD -->
+      <section id="vDash" class="hide">
+        <div class="stats mb" id="stats"></div>
+        <div class="card mb">
+          <h3>Pipeline by status <span class="sp"></span><span class="hint">click a row for the full report</span></h3>
+          <div class="tbl-wrap"><table id="matrixTbl"></table></div>
+        </div>
+        <div class="grid2">
+          <div class="card">
+            <h3>Team performance <span class="sp"></span><span class="hint">click an agent</span></h3>
+            <div class="tbl-wrap"><table id="agentTbl"></table></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <div class="card"><h3>Assign leads</h3><div class="in">
+              <div class="frm">
+                <label class="field"><span class="flabel">Agent</span><select class="inp" id="asgAgent"></select></label>
+                <label class="field"><span class="flabel">How many</span><input class="inp" id="asgCount" type="number" value="50" min="1" max="1000"/></label>
+                <label class="field"><span class="flabel">MC number type</span><select class="inp" id="asgFormat">
+                  <option value="">MOTUS + Legacy</option><option value="MOTUS">MOTUS only</option><option value="LEGACY">Legacy only</option></select></label>
+                <label class="field"><span class="flabel">State (optional)</span><input class="inp" id="asgState" placeholder="TX" maxlength="2" style="text-transform:uppercase"/></label>
+                <label class="chk full"><input type="checkbox" id="asgFresh"/> Only 0–7 days old</label>
+              </div>
+              <button class="btn block" id="btnAssign" style="margin-top:12px"><svg><use href="#ic-plus"/></svg>Assign leads</button>
+              <div class="note" id="asgMsg"></div>
+            </div></div>
+            <div class="card"><h3>Get new leads from FMCSA</h3><div class="in">
+              <div style="display:flex;gap:9px;align-items:end;flex-wrap:wrap">
+                <label class="field" style="flex:1;min-width:130px"><span class="flabel">Look back</span><select class="inp" id="syncDays">
+                  <option value="7">Last 7 days</option><option value="14" selected>Last 14 days</option>
+                  <option value="30">Last 30 days</option><option value="60">Last 60 days</option></select></label>
+                <label class="field" style="flex:1;min-width:140px"><span class="flabel">MC number type</span><select class="inp" id="syncFormat">
+                  <option value="">MOTUS + Legacy</option><option value="MOTUS">MOTUS only</option><option value="LEGACY">Legacy only</option></select></label>
+                <button class="btn" id="btnSync"><svg><use href="#ic-refresh"/></svg>Fetch</button>
+              </div>
+              <div class="prog"><i id="syncBar"></i></div>
+              <div class="note" id="syncMsg">Not run yet</div>
+            </div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- LEADS -->
+      <section id="vLeads" class="hide">
+        <div class="lead-grid" id="leadGrid">
+          <div class="card">
+            <div class="fu-bar hide" id="fuBar"><b>Callbacks that are due.</b> Oldest first — clear these before starting fresh leads.</div>
+            <div class="toolbar">
+              <input type="search" class="inp" id="q" placeholder="Search name, USDOT, MC, officer, phone, email, city"/>
+              <select class="inp" id="fStatus"><option value="">All statuses</option></select>
+              <select class="inp" id="fScope"><option value="mine">My leads</option><option value="all">All leads</option><option value="unassigned">Unassigned</option></select>
+              <select class="inp" id="fBucket"><option value="">Any age</option></select>
+              <select class="inp" id="fFormat"><option value="">MOTUS + Legacy</option><option value="MOTUS">MOTUS only</option><option value="LEGACY">Legacy only</option></select>
+              <span id="dateWrap" class="hide" style="display:flex;align-items:center;gap:6px">
+                <span class="flabel">Assigned</span>
+                <input type="date" class="inp" id="fDate" style="width:auto"/>
+                <button class="btn sec sm" id="btnDatePrev" title="Previous day">‹</button>
+                <button class="btn sec sm" id="btnDateToday">Today</button>
+                <button class="btn sec sm" id="btnDateNext" title="Next day">›</button>
+              </span>
+              <label class="chk"><input type="checkbox" id="fFresh"/> 0–7 days</label>
+              <button class="btn sec sm" id="btnClear">Clear</button>
+              <span class="sp" style="flex:1"></span>
+              <span id="searchHint" class="hide" style="font-size:0.7188rem;color:var(--warn);font-weight:600">searching all dates</span>
+              <span style="font-size:0.7812rem;color:var(--ink-3)" id="count"></span>
+            </div>
+            <div class="listwrap"><table id="tbl"></table></div>
+          </div>
+          <div class="card" id="detail">
+            <div class="dhead" id="detailHead"><h2 style="font-size:0.875rem;color:var(--ink-3)">Lead details</h2></div>
+            <div class="dbody" id="detailIn"><div class="empty"><div class="ic"><svg><use href="#ic-list"/></svg></div>Select a lead to see details and start calling.</div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- DAILY FOLDERS -->
+      <section id="vDaily" class="hide">
+        <div class="card">
+          <div class="toolbar"><div id="crumbs" class="crumbs"></div><span class="sp" style="flex:1"></span><select class="inp hide" id="dvAgent" style="width:auto"></select></div>
+          <div class="in" id="dvBody"><div class="empty">Loading…</div></div>
+        </div>
+      </section>
+
+      <!-- BUCKETS -->
+      <section id="vBuckets" class="hide">
+        <div class="stats mb" id="bkStats"></div>
+        <div class="card mb">
+          <h3>Lead age groups <span class="sp"></span><span class="hint">recalculated live — a lead moves group on its own as it ages</span></h3>
+          <div class="tbl-wrap"><table id="bkTbl"></table></div>
+        </div>
+        <div class="grid2">
+          <div class="card"><h3>Assign from a group</h3><div class="in">
+            <div class="frm">
+              <label class="field full"><span class="flabel">Age group</span><select class="inp" id="bkPick"></select></label>
+              <label class="field"><span class="flabel">Agent</span><select class="inp" id="bkAgent"></select></label>
+              <label class="field"><span class="flabel">How many</span><input class="inp" id="bkCount" type="number" value="50" min="1" max="1000"/></label>
+              <label class="field"><span class="flabel">MC number type</span><select class="inp" id="bkFormat">
+                <option value="">MOTUS + Legacy</option><option value="MOTUS">MOTUS only</option><option value="LEGACY">Legacy only</option></select></label>
+              <label class="field"><span class="flabel">State (optional)</span><input class="inp" id="bkState" maxlength="2" placeholder="TX" style="text-transform:uppercase"/></label>
+            </div>
+            <button class="btn block" id="btnAssignBucket" style="margin-top:12px"><svg><use href="#ic-plus"/></svg>Assign from this group</button>
+            <div class="note" id="bkMsg"></div>
+          </div></div>
+          <div class="card"><h3>Group detail</h3><div class="in" id="bkDetail"><div class="empty">Pick a group above.</div></div></div>
+        </div>
+      </section>
+
+      <!-- TEAM -->
+      <section id="vTeam" class="hide">
+        <div class="card mb" style="border-left:3px solid var(--warn)"><div class="in" style="display:flex;gap:11px;align-items:flex-start">
+          <svg class="i" style="color:var(--warn)"><use href="#ic-lock"/></svg>
+          <div style="font-size:0.8125rem;color:var(--ink-3)"><b style="color:var(--ink)">PINs cannot be displayed.</b> They are stored one-way (hashed), so nobody — not even an admin — can read them back. If someone forgets theirs, use <b>Reset PIN</b>.</div>
+        </div></div>
+        <div class="grid2">
+          <div class="card"><h3>Team</h3><div class="tbl-wrap"><table id="teamTbl"></table></div></div>
+          <div class="card"><h3>Add a team member</h3><div class="in">
+            <div class="frm">
+              <label class="field"><span class="flabel">Name</span><input class="inp" id="nuName" placeholder="e.g. Bilal"/></label>
+              <label class="field"><span class="flabel">Role</span><select class="inp" id="nuRole"><option value="agent">Agent</option><option value="admin">Admin</option></select></label>
+              <label class="field full"><span class="flabel">PIN (agents 4+, admins 6+ digits)</span><input class="inp" id="nuPin" maxlength="12" inputmode="numeric" placeholder="0000"/></label>
+            </div>
+            <button class="btn block" id="btnAddUser" style="margin-top:12px"><svg><use href="#ic-plus"/></svg>Create account</button>
+            <div class="note" id="nuMsg"></div>
+          </div></div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<!-- MODALS -->
+<div id="pinModal" class="modal hide"><div class="box">
+  <h3>Change my PIN</h3>
+  <div class="frm">
+    <label class="field full"><span class="flabel">Current PIN</span><input class="inp" id="cpOld" type="password" inputmode="numeric" maxlength="12"/></label>
+    <label class="field full"><span class="flabel">New PIN</span><input class="inp" id="cpNew" type="password" inputmode="numeric" maxlength="12"/></label>
+    <label class="field full"><span class="flabel">Confirm new PIN</span><input class="inp" id="cpNew2" type="password" inputmode="numeric" maxlength="12"/></label>
+  </div>
+  <div class="err" id="cpErr"></div>
+  <div style="display:flex;gap:9px;margin-top:8px"><button class="btn block" id="btnSavePin">Save</button><button class="btn sec" id="btnCancelPin">Cancel</button></div>
+</div></div>
+
+<div id="rstModal" class="modal hide"><div class="box">
+  <h3>Reset PIN for <span id="rstName"></span></h3>
+  <div class="frm"><label class="field full"><span class="flabel">New PIN</span><input class="inp" id="rstPin" maxlength="12" inputmode="numeric" placeholder="0000"/></label></div>
+  <div class="err" id="rstErr"></div>
+  <div style="display:flex;gap:9px;margin-top:8px"><button class="btn block" id="btnSaveReset">Set PIN</button><button class="btn sec" id="btnCancelReset">Cancel</button></div>
+</div></div>
+
+<div id="repModal" class="modal hide"><div class="box wide">
+  <div style="display:flex;align-items:center;gap:11px;margin-bottom:14px">
+    <div class="avatar" id="repAv" style="width:40px;height:40px;font-size:1.0rem"></div>
+    <div style="flex:1"><h3 id="repName" style="margin:0"></h3><div style="font-size:0.75rem;color:var(--ink-3)" id="repRole"></div></div>
+    <button class="btn sec sm" id="btnCloseReport">Close</button>
+  </div>
+  <div id="repBody"></div>
+</div></div>
+
+<div id="toast"></div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

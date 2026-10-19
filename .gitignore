@@ -1,0 +1,22 @@
+# ── data & secrets — NEVER commit or deploy ────────────────────────────────
+*.db
+*.db-wal
+*.db-shm
+*.db.backup-*
+INITIAL-PINS.txt
+.env
+boot.log
+boot.err
+/data/
+
+# ── python ─────────────────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# ── os / editor ──────────────────────────────────────────────────────────────
+Thumbs.db
+.DS_Store
+.vscode/

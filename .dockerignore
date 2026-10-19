@@ -1,0 +1,20 @@
+# never ship data, secrets, tests or Windows-LAN scripts into the image
+*.db
+*.db-wal
+*.db-shm
+*.db.backup-*
+INITIAL-PINS.txt
+.env
+boot.log
+boot.err
+__pycache__/
+*.pyc
+.git/
+.gitignore
+tests/
+*.bat
+reset_progress.py
+DEPLOY.md
+README.md
+.dockerignore
+Dockerfile

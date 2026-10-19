@@ -1,0 +1,4 @@
+# LeadHub runs on the Python standard library.
+# certifi gives a reliable TLS trust store for the outbound FMCSA API calls;
+# the app falls back to the system trust store if it is not installed.
+certifi>=2024.2.2

@@ -1,0 +1,25 @@
+# Render blueprint for the LeadHub public DEMO (free tier, no card, no database add-on).
+# You can also configure it by hand in the dashboard:
+#   New Web Service -> connect your GitHub repo -> Language: Python 3 -> Instance: Free
+#   Build command:  pip install -r requirements.txt
+#   Start command:  python app.py
+#   Health check path: /healthz
+#   Environment: LEADHUB_DEMO=1, LEADHUB_ENFORCE_HTTPS=1
+services:
+  - type: web
+    name: leadhub-demo
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python app.py
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: LEADHUB_DEMO
+        value: "1"
+      - key: LEADHUB_ENFORCE_HTTPS
+        value: "1"
+      - key: LEADHUB_BRAND_NAME
+        value: LeadHub
+      - key: PYTHON_VERSION
+        value: "3.12.7"
