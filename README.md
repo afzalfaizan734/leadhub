@@ -1,3 +1,12 @@
+﻿---
+title: LeadHub Demo
+colorFrom: indigo
+colorTo: blue
+sdk: docker
+app_port: 8000
+pinned: false
+---
+
 # LeadHub
 
 A small shared lead-management server for a truck-dispatch team. One admin assigns
@@ -30,7 +39,7 @@ Run **`Setup-Name.bat` as administrator, once, on the server PC only**. It renam
 this PC to `LEADMANAGER`, opens the firewall and restarts. After that everyone uses
 `http://leadmanager`.
 
-Until then, `http://<computer-name>` works — the server prints it on startup.
+Until then, `http://<computer-name>` works â€” the server prints it on startup.
 
 The name follows the PC, so the router handing out a different IP changes nothing.
 Nothing to edit on the agents' machines, ever.
@@ -38,7 +47,7 @@ Nothing to edit on the agents' machines, ever.
 **Why a rename and not an alias.** An SMB alias
 (`LanmanServer\Parameters\OptionalNames`) registers only the NetBIOS `<20>`
 file-server record. Browsers resolve hostnames from the `<00>` workstation record,
-which an alias never creates — so `http://leadmanager` fails with
+which an alias never creates â€” so `http://leadmanager` fails with
 `ERR_NAME_NOT_RESOLVED` while `\\leadmanager\share` would have worked. Renaming the
 machine registers both.
 
@@ -53,7 +62,7 @@ or fall back to the IP address shown in the server window.
 Copy the whole `LeadHub` folder. That's it.
 
 * Everything lives in the folder, including the database (`leadhub.db`).
-* Pure Python standard library — nothing to `pip install`.
+* Pure Python standard library â€” nothing to `pip install`.
 * Needs Python 3.9+.
 * On the new PC run `Setup-Name.bat` as admin if you want the `leadmanager` name.
 
@@ -65,24 +74,24 @@ Copy the whole `LeadHub` folder. That's it.
 
 ```
 LeadHub/
-├─ app.py                  entry point only: wire up, print URLs, serve
-├─ leadhub/
-│  ├─ config.py            settings + domain vocabulary (single source of truth)
-│  ├─ database.py          connection, schema, additive migrations
-│  ├─ security.py          PIN hashing, sessions, lockout
-│  ├─ repositories.py      data access, one class per table
-│  ├─ services.py          the use cases
-│  ├─ fmcsa.py             gateway to FMCSA's open-data API
-│  ├─ api.py               HTTP routing + auth guards + composition root
-│  └─ web/index.html       the whole UI, one file, no build step
-├─ leadhub.db              your data
-├─ Start-LeadHub.bat
-└─ Setup-Name.bat          run as admin once
+â”œâ”€ app.py                  entry point only: wire up, print URLs, serve
+â”œâ”€ leadhub/
+â”‚  â”œâ”€ config.py            settings + domain vocabulary (single source of truth)
+â”‚  â”œâ”€ database.py          connection, schema, additive migrations
+â”‚  â”œâ”€ security.py          PIN hashing, sessions, lockout
+â”‚  â”œâ”€ repositories.py      data access, one class per table
+â”‚  â”œâ”€ services.py          the use cases
+â”‚  â”œâ”€ fmcsa.py             gateway to FMCSA's open-data API
+â”‚  â”œâ”€ api.py               HTTP routing + auth guards + composition root
+â”‚  â””â”€ web/index.html       the whole UI, one file, no build step
+â”œâ”€ leadhub.db              your data
+â”œâ”€ Start-LeadHub.bat
+â””â”€ Setup-Name.bat          run as admin once
 ```
 
-Dependencies point one way only: `api → services → repositories → database`.
+Dependencies point one way only: `api â†’ services â†’ repositories â†’ database`.
 
-**SOLID.** Each module has one reason to change — `security.py` for auth rules,
+**SOLID.** Each module has one reason to change â€” `security.py` for auth rules,
 `fmcsa.py` for the external API, `repositories.py` for queries. Services depend on
 repository objects handed to them by the composition root in `api.py`, not on
 globals, so any of them can be swapped or faked in a test. Adding a status or an
@@ -105,21 +114,21 @@ sitting in *0-7 days* today lands in *8-30 days* tomorrow on its own. There is n
 nightly job and nothing to re-run. Change the bands in `config.BUCKETS` and the
 tables, filters and assignment all follow.
 
-Admin → **Lead Groups** shows each band, how many are free to assign, and who holds
+Admin â†’ **Lead Groups** shows each band, how many are free to assign, and who holds
 the rest. Assign a chosen number from a chosen band straight to an agent.
 
 ---
 
 ## Roles
 
-**Admin** — dashboard, lead groups, all leads, team management, FMCSA sync,
+**Admin** â€” dashboard, lead groups, all leads, team management, FMCSA sync,
 assignment, per-agent reports.
 
-**Agent** — only the leads assigned to them. Enforced server-side: asking for
+**Agent** â€” only the leads assigned to them. Enforced server-side: asking for
 another scope is ignored, and editing someone else's lead is refused.
 
 PINs are stored as PBKDF2-SHA256 with a per-user random salt, so **nobody can read
-them back** — not an admin, not whoever copies the database file. If someone forgets
+them back** â€” not an admin, not whoever copies the database file. If someone forgets
 theirs, an admin sets a new one from the Team page. Five wrong attempts locks that
 one account for two minutes.
 
@@ -137,10 +146,10 @@ All free, public, no API key, from `data.transportation.gov`:
 | Company Census | `az4n-8mr2` | Cell phone, company officer, fleet size (daily) |
 | SMS Census | `kjg3-diqy` | Email address (monthly) |
 
-Dashboard → **Get new leads from FMCSA** pulls authorities that went active in the
+Dashboard â†’ **Get new leads from FMCSA** pulls authorities that went active in the
 chosen window, keeps active US trucking carriers only, **drops any USDOT already in
 the database**, enriches the rest, and inserts. Runs in the background; typically
-under a minute. Safe to run repeatedly — it never creates a duplicate.
+under a minute. Safe to run repeatedly â€” it never creates a duplicate.
 
 Email coverage is thinner on the freshest carriers because FMCSA only republishes
 the email file monthly. They fill in on later syncs.
@@ -151,7 +160,7 @@ the email file monthly. They fill in on later syncs.
 
 Phone numbers open RingCentral via `rcapp://r/call?number=+1XXXXXXXXXX`.
 
-`tel:` is deliberately **not** used — on this machine Windows maps `tel:` to
+`tel:` is deliberately **not** used â€” on this machine Windows maps `tel:` to
 Microsoft Lync, so those links would open the wrong app. If Excel or the browser
 prompts on first click, `Enable-RingCentral-Dialing.reg` (in the parent folder)
 trusts the `rcapp:` protocol.
@@ -163,7 +172,7 @@ trusts the `rcapp:` protocol.
 * **Plain HTTP on the local network.** Fine behind your own router; do not expose
   this to the internet without TLS and real passwords first.
 * **Sessions live in memory**, so restarting the server signs everyone out. No data
-  is lost — edits save immediately.
+  is lost â€” edits save immediately.
 * **Four-digit PINs** are only 10,000 combinations; the lockout is what makes them
   safe. Adequate for a trusted office, not for public exposure.
 * **One server PC.** If it is off or asleep, nobody can work.

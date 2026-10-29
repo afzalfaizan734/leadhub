@@ -16,6 +16,7 @@ ENV LEADHUB_DATA_DIR=/data \
     LEADHUB_PORT=8000 \
     LEADHUB_ENFORCE_HTTPS=1 \
     LEADHUB_ADMIN_PIN_MIN=6 \
+    LEADHUB_DEMO=1 \
     PYTHONUNBUFFERED=1
 
 # The host may inject $PORT; config.py prefers it over LEADHUB_PORT.
