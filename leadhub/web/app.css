@@ -223,7 +223,9 @@ tbody tr:hover{background:var(--surface-2)}
 tbody tr.sel{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent)}
 td.co b{font-weight:600}
 td.co .s{display:block;color:var(--ink-3);font-size:0.7188rem;margin-top:1px;font-variant-numeric:tabular-nums}
-td.r{text-align:right;font-variant-numeric:tabular-nums}
+th.r,td.r{text-align:right;font-variant-numeric:tabular-nums}
+td.fu-over{color:var(--bad);font-weight:600}
+td.fu-today{color:var(--warn);font-weight:600}
 .freshdot{width:7px;height:7px;border-radius:50%;background:var(--good);display:inline-block;margin-right:5px;vertical-align:middle}
 
 /* ---------------- status pills / badges ---------------- */

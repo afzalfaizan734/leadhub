@@ -33,6 +33,7 @@
 <symbol id="ic-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
 <symbol id="ic-inbox" viewBox="0 0 24 24"><path d="M3 13h5l1.5 3h5L21 13M3 13 6 5h12l3 8v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
 <symbol id="ic-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+<symbol id="ic-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2.5 12h3M18.5 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></symbol>
 </defs></svg>
 
 <!-- ======================= LOGIN ======================= -->
@@ -81,6 +82,7 @@
       <a data-view="buckets" data-roles="admin"><svg><use href="#ic-layers"/></svg>Lead Groups</a>
       <a data-view="leads" data-roles="admin agent"><svg><use href="#ic-list"/></svg><span data-label="leads">Leads</span></a>
       <a data-view="team" data-roles="admin"><svg><use href="#ic-users"/></svg>Team</a>
+      <a data-view="settings" data-roles="admin"><svg><use href="#ic-gear"/></svg>Settings</a>
     </nav>
     <div class="foot">
       <div class="uchip"><div class="avatar" id="uav"></div><div><b id="uname"></b><span id="urole"></span></div></div>
@@ -147,7 +149,7 @@
       <section id="vLeads" class="hide">
         <div class="lead-grid" id="leadGrid">
           <div class="card">
-            <div class="fu-bar hide" id="fuBar"><b>Callbacks that are due.</b> Oldest first — clear these before starting fresh leads.</div>
+            <div class="fu-bar hide" id="fuBar"><b>Your scheduled follow-ups.</b> Oldest first — overdue (red) and today (amber) are at the top.</div>
             <div class="toolbar">
               <input type="search" class="inp" id="q" placeholder="Search name, USDOT, MC, officer, phone, email, city"/>
               <select class="inp" id="fStatus"><option value="">All statuses</option></select>
@@ -228,6 +230,19 @@
         </div>
       </section>
 
+      <!-- SETTINGS -->
+      <section id="vSettings" class="hide">
+        <div class="grid2">
+          <div class="card"><h3>Time &amp; timezone</h3><div class="in">
+            <p class="muted" style="font-size:0.85rem;margin:0 0 12px">Pick the timezone your business runs on. All dates, lead ages, follow-ups and "today" across the app use it — no matter what the server PC's own clock says. (Each carrier's call-window clock still shows <b>their</b> own local time.)</p>
+            <label class="field" style="max-width:360px"><span class="flabel">Business timezone</span><select class="inp" id="setTz"></select></label>
+            <button class="btn" id="btnSaveTz" style="margin-top:12px"><svg><use href="#ic-check"/></svg>Save timezone</button>
+            <div class="note" id="tzMsg"></div>
+          </div></div>
+          <div class="card"><h3>Server time</h3><div class="in" id="tzInfo"></div></div>
+        </div>
+      </section>
+
     </div>
   </main>
 </div>
@@ -258,6 +273,15 @@
     <button class="btn sec sm" id="btnCloseReport">Close</button>
   </div>
   <div id="repBody"></div>
+</div></div>
+
+<div id="confirmModal" class="modal hide"><div class="box">
+  <h3 id="cfTitle">Please confirm</h3>
+  <p id="cfMsg" style="color:var(--ink-2);margin:0 0 16px"></p>
+  <div style="display:flex;gap:9px">
+    <button class="btn danger" style="flex:1" id="cfYes">Confirm</button>
+    <button class="btn sec" style="flex:1" id="cfNo">Cancel</button>
+  </div>
 </div></div>
 
 <div id="toast"></div>

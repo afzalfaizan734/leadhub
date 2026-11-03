@@ -10,7 +10,7 @@ import re
 import sys
 import threading
 
-from . import config, database, fmcsa, security
+from . import clock, config, database, fmcsa, security
 from .repositories import (ActivityRepository, CallLogRepository, INSERT_COLS,
                            LeadRepository, UserRepository, now)
 
@@ -75,7 +75,9 @@ class AccountService:
         self.users, self.sessions, self.lockout = users, sessions, lockout
 
     def bootstrap_defaults(self):
-        for name, role in (("Admin", "admin"), ("Saad", "agent"), ("Ahmad", "agent")):
+        # Fresh install starts with a single Admin account; the admin then adds
+        # their own team from the Team page.
+        for name, role in (("Admin", "admin"),):
             self.users.ensure(name, role)
 
     def issue_missing_pins(self):
@@ -171,6 +173,20 @@ class AccountService:
         self.users.set_pin(uid, pin)
         _log_security(f"create_user name={name!r} role={role}")
         return uid
+
+    def delete_user(self, actor, target_id):
+        """Remove a user. An admin cannot delete their own account (that would
+        risk locking everyone out). The caller returns the user's leads to the
+        pool first (see AssignmentService.withdraw_all)."""
+        if actor["id"] == target_id:
+            raise AuthError("You cannot delete your own account.", 400)
+        row = self.users.by_id(target_id)
+        if not row:
+            raise AuthError("No such user.", 404)
+        self.sessions.drop_user(target_id)      # end any of their live sessions
+        self.users.delete(target_id)
+        _log_security(f"delete_user name={row['name']!r} by={actor.get('name')!r}")
+        return row["name"]
 
 
 # --------------------------------------------------------------- leads
@@ -278,6 +294,15 @@ class AssignmentService:
         return {"unassigned": self.leads.unassign([int(i) for i in ids],
                                                   actor["name"], self.activity)}
 
+    def withdraw_all(self, actor, agent_id):
+        """Take every lead back from one agent and return them to the pool."""
+        agent = self.users.by_id(agent_id)
+        if not agent:
+            raise AuthError("No such agent.", 404)
+        ids = self.leads.ids_for_agent(agent_id)
+        n = self.leads.unassign(ids, actor["name"], self.activity) if ids else 0
+        return {"withdrawn": n, "agent": agent["name"]}
+
 
 # --------------------------------------------------------------- reporting
 class ReportService:
@@ -383,7 +408,7 @@ class CalendarService:
     def months(self, user, agent_id=None):
         who = self._scope_agent(user, agent_id)
         rows = self.leads.months(who)
-        today = datetime.date.today().strftime("%Y-%m")
+        today = clock.today().strftime("%Y-%m")
         if not any(r["month"] == today for r in rows):
             rows.insert(0, {"month": today, "leads": 0, "days": 0, "agents": 0,
                             "worked": 0, "calls": 0})
@@ -409,7 +434,7 @@ class CalendarService:
                                 "leads": r["leads"], "worked": r["worked"],
                                 "interested": r["interested"], "calls": r["calls"]})
         days = sorted(grouped.values(), key=lambda d: d["day"], reverse=True)
-        today = datetime.date.today().strftime("%Y-%m-%d")
+        today = clock.today().strftime("%Y-%m-%d")
         if month == today[:7] and not any(d["day"] == today for d in days):
             days.insert(0, {"day": today, "label": self.day_label(today), "leads": 0,
                             "worked": 0, "interested": 0, "closed": 0, "dnc": 0,
@@ -612,7 +637,7 @@ def seed_demo(app):
     ensure("Ava Chen", "admin")
     ag = {n: ensure(n, "agent") for n in ("A. Rivera", "J. Chen", "M. Okafor")}
 
-    today = datetime.date.today()
+    today = clock.today()
     # (days_old, name, officer, city, state, phone, cell, trucks, drivers)
     data = [
         (3, "Redline Freight LLC", "Marcus Hale", "Dallas", "TX", "2142075512", "2149930148", "12", "14"),

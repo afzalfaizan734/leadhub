@@ -4,17 +4,21 @@ Services talk to repositories; nothing else writes SQL against these tables.
 Lead age and bucket are always derived here from authority_date, so they are
 correct on the day they are read rather than the day they were imported.
 """
-import datetime
-
-from . import config, database, security
-
-AGE = config.AGE_SQL
-BUCKET = config.bucket_case_sql()
-LEAD_SELECT = f"l.*, u.name AS agent, ({AGE}) AS age, ({BUCKET}) AS bucket"
+from . import clock, config, database, security
 
 
 def now() -> str:
-    return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    return clock.now_str()
+
+
+def _age():
+    """AGE expression using the accurate business-timezone 'now'."""
+    return config.age_sql(clock.now_str())
+
+
+def _lead_select():
+    a = _age()
+    return f"l.*, u.name AS agent, ({a}) AS age, ({config.bucket_case_sql(a)}) AS bucket"
 
 
 class UserRepository:
@@ -54,6 +58,14 @@ class UserRepository:
     def touch_login(self, uid):
         with database.connect() as c:
             c.execute("UPDATE users SET last_login=? WHERE id=?", (now(), uid))
+            c.commit()
+
+    def delete(self, uid):
+        """Hard-delete a user. Callers must first return that user's leads to the
+        pool (activity/call_log keep the person's name as free text, so history
+        is preserved)."""
+        with database.connect() as c:
+            c.execute("DELETE FROM users WHERE id=?", (uid,))
             c.commit()
 
 
@@ -102,7 +114,7 @@ class CallLogRepository:
         with database.connect() as c:
             return c.execute(
                 "SELECT COUNT(*) FROM call_log WHERE who=? "
-                "AND substr(ts,1,10)=date('now','localtime')", (who,)).fetchone()[0]
+                f"AND substr(ts,1,10)='{clock.today_str()}'", (who,)).fetchone()[0]
 
 
 class LeadRepository:
@@ -131,13 +143,13 @@ class LeadRepository:
             where.append("UPPER(IFNULL(l.number_format,''))=?")
             args.append(str(number_format).upper())
         if bucket:
-            frag = config.bucket_where_sql(bucket)
+            frag = config.bucket_where_sql(bucket, _age())
             if frag:
                 where.append(frag)
         if followup == "due":
             # dated, and that date has arrived or passed
             where.append("IFNULL(l.next_followup,'')<>'' "
-                         "AND l.next_followup <= date('now','localtime')")
+                         f"AND l.next_followup <= '{clock.today_str()}'")
         elif followup == "any":
             where.append("IFNULL(l.next_followup,'')<>''")
         if day:
@@ -147,7 +159,7 @@ class LeadRepository:
             where.append("substr(l.assigned_at,1,7)=?")
             args.append(month)
         if fresh:
-            where.append(f"({AGE}) <= 7")
+            where.append(f"({_age()}) <= 7")
         if text:
             like = f"%{text}%"
             where.append("(l.legal_name LIKE ? OR l.usdot LIKE ? OR l.mc_number LIKE ? "
@@ -158,14 +170,15 @@ class LeadRepository:
 
     def search(self, *, limit=300, offset=0, **kw):
         # Follow-up lists read oldest-first; everything else keeps its existing order.
+        _a = _age()
         order = ("l.next_followup ASC, l.legal_name"
                  if kw.get("followup") else
-                 f"(({AGE}) IS NULL), ({AGE}), l.legal_name")
+                 f"(({_a}) IS NULL), ({_a}), l.legal_name")
         w, args = self._filters(**kw)
         with database.connect() as c:
             total = c.execute(f"SELECT COUNT(*) FROM leads l {w}", args).fetchone()[0]
             rows = [dict(r) for r in c.execute(
-                f"""SELECT {LEAD_SELECT} FROM leads l
+                f"""SELECT {_lead_select()} FROM leads l
                     LEFT JOIN users u ON u.id=l.assigned_to {w}
                     ORDER BY {order}
                     LIMIT ? OFFSET ?""", args + [limit, offset])]
@@ -178,12 +191,13 @@ class LeadRepository:
             where.append("assigned_to=?")
             args.append(user_id)
         w = "WHERE " + " AND ".join(where)
+        td = clock.today_str()
         with database.connect() as c:
             r = c.execute(f"""
                 SELECT
-                  SUM(CASE WHEN next_followup <  date('now','localtime') THEN 1 ELSE 0 END) overdue,
-                  SUM(CASE WHEN next_followup =  date('now','localtime') THEN 1 ELSE 0 END) today,
-                  SUM(CASE WHEN next_followup >  date('now','localtime') THEN 1 ELSE 0 END) upcoming,
+                  SUM(CASE WHEN next_followup <  '{td}' THEN 1 ELSE 0 END) overdue,
+                  SUM(CASE WHEN next_followup =  '{td}' THEN 1 ELSE 0 END) today,
+                  SUM(CASE WHEN next_followup >  '{td}' THEN 1 ELSE 0 END) upcoming,
                   COUNT(*) total
                 FROM leads {w}""", args).fetchone()
         d = {k: (r[k] or 0) for k in ("overdue", "today", "upcoming", "total")}
@@ -193,7 +207,7 @@ class LeadRepository:
     def by_id(self, lead_id):
         with database.connect() as c:
             return c.execute(
-                f"SELECT {LEAD_SELECT} FROM leads l LEFT JOIN users u ON u.id=l.assigned_to "
+                f"SELECT {_lead_select()} FROM leads l LEFT JOIN users u ON u.id=l.assigned_to "
                 f"WHERE l.id=?", (lead_id,)).fetchone()
 
     def existing_usdots(self):
@@ -240,7 +254,7 @@ class LeadRepository:
         """Live counts per age bucket, split into unassigned vs each agent."""
         with database.connect() as c:
             return [dict(r) for r in c.execute(f"""
-                SELECT ({BUCKET}) AS bucket,
+                SELECT ({config.bucket_case_sql(_age())}) AS bucket,
                        IFNULL(u.name,'(unassigned)') AS owner,
                        COUNT(*) AS n,
                        SUM(CASE WHEN l.assigned_to IS NULL THEN 1 ELSE 0 END) AS free
@@ -249,7 +263,7 @@ class LeadRepository:
 
     def bucket_detail(self, bucket_key):
         """Contactability + state spread for one bucket - used by the Buckets tab."""
-        frag = config.bucket_where_sql(bucket_key)
+        frag = config.bucket_where_sql(bucket_key, _age())
         if not frag:
             return {}
         with database.connect() as c:
@@ -297,7 +311,7 @@ class LeadRepository:
                     f"SELECT disposition,COUNT(*) FROM leads WHERE {frag} "
                     f"GROUP BY disposition ORDER BY COUNT(*) DESC LIMIT 8", (uid,))},
                 "by_bucket": {r[0]: r[1] for r in c.execute(
-                    f"SELECT ({BUCKET}) b,COUNT(*) FROM leads l WHERE l.{frag} GROUP BY b", (uid,))},
+                    f"SELECT ({config.bucket_case_sql(_age())}) b,COUNT(*) FROM leads l WHERE l.{frag} GROUP BY b", (uid,))},
                 "top_states": [{"state": r[0], "n": r[1]} for r in c.execute(
                     f"SELECT state,COUNT(*) FROM leads WHERE {frag} "
                     f"GROUP BY state ORDER BY COUNT(*) DESC LIMIT 6", (uid,))],
@@ -330,7 +344,7 @@ class LeadRepository:
                         number_format=None):
         where, args = ["l.assigned_to IS NULL"], []
         if bucket:
-            frag = config.bucket_where_sql(bucket)
+            frag = config.bucket_where_sql(bucket, _age())
             if frag:
                 where.append(frag)
         if state:
@@ -340,11 +354,12 @@ class LeadRepository:
             where.append("UPPER(IFNULL(l.number_format,''))=?")
             args.append(str(number_format).upper())
         if fresh:
-            where.append(f"({AGE}) <= 7")
+            where.append(f"({_age()}) <= 7")
+        _a = _age()
         with database.connect() as c:
             return [r[0] for r in c.execute(
                 f"""SELECT l.id FROM leads l WHERE {' AND '.join(where)}
-                    ORDER BY (({AGE}) IS NULL), ({AGE}) LIMIT ?""", args + [count])]
+                    ORDER BY (({_a}) IS NULL), ({_a}) LIMIT ?""", args + [count])]
 
     def assign(self, lead_ids, agent_id, agent_name, actor, activity: ActivityRepository):
         """Stamps assigned_at, which is what the day/month folders group on.
@@ -369,6 +384,11 @@ class LeadRepository:
                 activity.add(c, i, actor, "unassign", "")
             c.commit()
         return len(lead_ids)
+
+    def ids_for_agent(self, uid):
+        with database.connect() as c:
+            return [r[0] for r in c.execute(
+                "SELECT id FROM leads WHERE assigned_to=?", (uid,))]
 
     # ---------------- calendar (month / day folders)
     def months(self, agent_id=None):
@@ -434,3 +454,19 @@ INSERT_COLS = ["usdot", "docket", "mc_number", "number_format", "legal_name", "d
                "officer", "phone", "cell", "email", "street", "city", "state", "zip",
                "power_units", "drivers", "authority_date", "days_since",
                "insurance_company", "coverage", "insurance_status", "created_at"]
+
+
+class SettingsRepository:
+    """Tiny key/value store for admin settings (e.g. the business timezone)."""
+
+    def get(self, key, default=None):
+        with database.connect() as c:
+            r = c.execute("SELECT value FROM settings WHERE key=?", (key,)).fetchone()
+            return r[0] if r else default
+
+    def set(self, key, value):
+        with database.write_lock, database.connect() as c:
+            c.execute("INSERT INTO settings(key,value) VALUES(?,?) "
+                      "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+                      (key, str(value)))
+            c.commit()

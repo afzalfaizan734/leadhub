@@ -129,6 +129,18 @@ END
 """
 
 
+def age_sql(now_lit: str) -> str:
+    """AGE expression that uses an explicit 'now' literal (the accurate
+    business-timezone time) instead of the server's local clock."""
+    return f"""
+CASE
+  WHEN l.authority_date IS NULL OR length(l.authority_date) <> 8 THEN NULL
+  ELSE MAX(0, CAST(julianday('{now_lit}') - julianday(
+        substr(l.authority_date,1,4)||'-'||substr(l.authority_date,5,2)||'-'||
+        substr(l.authority_date,7,2)) AS INTEGER))
+END"""
+
+
 def bucket_case_sql(age_expr: str = AGE_SQL) -> str:
     """Build the CASE that maps a live age onto a bucket key."""
     parts = ["CASE", f"  WHEN ({age_expr}) IS NULL THEN 'none'"]

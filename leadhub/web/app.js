@@ -2,7 +2,7 @@
    (no inline handlers; event delegation) and XSS-safe (everything escaped,
    status class from a fixed map, names in data-* not onclick). */
 "use strict";
-let ME = null, BOOT = null, ROWS = [], CUR = null, TOKEN = null, PENDING = null;
+let ME = null, BOOT = null, ROWS = [], CUR = null, TOKEN = null, PENDING = null, CLOCK_OFFSET = 0;
 let VIEW = "leads", SYNCT = null, RSTU = null, TOTAL = 0, DAYSHOWN = "", FUMODE = false, FUSTATS = null;
 let BK_SEL = null;
 const DV = { level: "months", month: null, day: null, agent: "" };
@@ -16,6 +16,13 @@ function toast(m, ok) {
   t.innerHTML = (ok !== false ? `<svg class="i sm"><use href="#ic-check"/></svg>` : "") +
     `<span>${esc(m)}</span>`;
   t.classList.add("on"); setTimeout(() => t.classList.remove("on"), 1900);
+}
+let CF_CB = null;
+function confirmAction(title, msg, onYes) {
+  $("#cfTitle").textContent = title;
+  $("#cfMsg").textContent = msg;
+  CF_CB = onYes;
+  $("#confirmModal").classList.remove("hide");
 }
 
 /* ---- status helpers (fixed maps; never interpolate raw status into markup) ---- */
@@ -64,17 +71,41 @@ const TZ = {
   CA: "America/Los_Angeles", NV: "America/Los_Angeles", OR: "America/Los_Angeles",
   WA: "America/Los_Angeles", AK: "America/Anchorage", HI: "Pacific/Honolulu"
 };
-function carrierClock(state) {
-  const zone = TZ[String(state || "").toUpperCase()]; if (!zone) return null;
+/* true time (synced to the server's internet-verified clock) + the business tz */
+function accurateNow() { return Date.now() + CLOCK_OFFSET; }
+function bizTZ() { return (BOOT && BOOT.time && BOOT.time.tz) || "America/New_York"; }
+/* ZIP-prefix overrides for the US states that span two timezones (ZIP pins the
+   location better than a state name). Anything not listed falls back to state. */
+const TZ_ZIP3 = {
+  "798": "America/Denver", "799": "America/Denver", "885": "America/Denver",
+  "324": "America/Chicago", "325": "America/Chicago",
+  "420": "America/Chicago", "421": "America/Chicago", "422": "America/Chicago",
+  "423": "America/Chicago", "424": "America/Chicago", "425": "America/Chicago",
+  "426": "America/Chicago", "427": "America/Chicago",
+  "463": "America/Chicago", "464": "America/Chicago", "476": "America/Chicago",
+  "477": "America/Chicago", "478": "America/Chicago",
+  "373": "America/New_York", "374": "America/New_York", "377": "America/New_York",
+  "378": "America/New_York", "379": "America/New_York",
+  "677": "America/Denver", "679": "America/Denver",
+  "691": "America/Denver", "693": "America/Denver",
+  "835": "America/Los_Angeles", "838": "America/Los_Angeles"
+};
+function carrierZone(zip, state) {
+  const z3 = String(zip || "").replace(/\D/g, "").slice(0, 3);
+  if (z3 && TZ_ZIP3[z3]) return TZ_ZIP3[z3];
+  return TZ[String(state || "").toUpperCase()] || null;
+}
+function carrierClock(zip, state) {
+  const zone = carrierZone(zip, state); if (!zone) return null;
   try {
-    const now = new Date();
+    const now = new Date(accurateNow());
     const time = new Intl.DateTimeFormat("en-US", { timeZone: zone, hour: "numeric", minute: "2-digit", hour12: true }).format(now);
     const hour = +new Intl.DateTimeFormat("en-US", { timeZone: zone, hour: "numeric", hour12: false }).format(now);
     return { time, hour, ok: hour >= 8 && hour < 21 };
   } catch (e) { return null; }
 }
-function localTimeBox(state) {
-  const c = carrierClock(state); if (!c) return "";
+function localTimeBox(zip, state) {
+  const c = carrierClock(zip, state); if (!c) return "";
   return c.ok
     ? `<div class="clock ok"><svg class="i sm"><use href="#ic-check"/></svg><span><b>${esc(c.time)}</b> where they are — fine to call</span></div>`
     : `<div class="clock no"><svg class="i sm"><use href="#ic-ban"/></svg><span><b>${esc(c.time)}</b> where they are — outside 8am–9pm, do not call yet</span></div>`;
@@ -123,6 +154,7 @@ function cycleText() {
   initTheme();
   initText();
   BOOT = await api("/api/bootstrap");
+  if (BOOT.time && typeof BOOT.time.utc_ms === "number") CLOCK_OFFSET = BOOT.time.utc_ms - Date.now();
   if (BOOT.brand && BOOT.brand.name) {
     $("#brandNameA").textContent = BOOT.brand.name; $("#brandNameB").textContent = BOOT.brand.name;
     document.title = BOOT.brand.name;
@@ -204,13 +236,13 @@ async function logout() {
 function go(v) {
   const isFu = v === "followups";
   FUMODE = isFu; VIEW = isFu ? "leads" : v;
-  ["dash", "daily", "buckets", "leads", "team"].forEach(k => {
+  ["dash", "daily", "buckets", "leads", "team", "settings"].forEach(k => {
     const s = $("#v" + k[0].toUpperCase() + k.slice(1)); if (s) s.classList.toggle("hide", k !== VIEW);
   });
   document.querySelectorAll("#navWrap a").forEach(a => a.classList.toggle("on", a.dataset.view === v));
-  $("#pageTitle").textContent = isFu ? "Follow-ups due"
+  $("#pageTitle").textContent = isFu ? "Follow-ups"
     : { dash: "Dashboard", buckets: "Lead Groups", daily: "Daily Folders",
-        leads: ME.role === "admin" ? "Leads" : "My Leads", team: "Team" }[v];
+        leads: ME.role === "admin" ? "Leads" : "My Leads", team: "Team", settings: "Settings" }[v];
   $("#fuBar").classList.toggle("hide", !isFu);
   if (isFu) { $("#fDate").value = ""; $("#fStatus").value = ""; $("#q").value = ""; }
   else if (ME.role !== "admin" && !$("#fDate").value) { $("#fDate").value = localToday(); }
@@ -228,6 +260,7 @@ function refresh() {
   if (VIEW === "buckets") loadBuckets();
   if (VIEW === "daily") openMonths();
   if (VIEW === "team") loadTeam();
+  if (VIEW === "settings") loadSettings();
 }
 
 /* ---- daily folders ---- */
@@ -383,6 +416,7 @@ async function openReport(id) {
   const st = Object.entries(r.by_status).sort((a, b) => b[1] - a[1]);
   const dp = Object.entries(r.by_disposition).filter(([k]) => k !== "(none)");
   $("#repBody").innerHTML = `
+    ${r.assigned > 0 ? `<button class="btn sec sm" data-act="withdraw" data-uid="${r.user.id}" data-name="${esc(r.user.name)}" style="color:var(--bad);margin-bottom:14px"><svg><use href="#ic-arrow"/></svg>Take back all ${r.assigned.toLocaleString()} leads</button>` : ""}
     <div class="stats" style="margin-bottom:14px">
       <div class="stat hi"><div class="n">${r.assigned.toLocaleString()}</div><div class="l">Assigned</div></div>
       <div class="stat"><div class="n">${r.touched.toLocaleString()}</div><div class="l">Worked (${pct}%)</div></div>
@@ -427,7 +461,8 @@ async function loadTeam() {
       return `<tr><td class="co"><b>${esc(u.name)}</b></td><td><span class="tag">${esc(u.role)}</span></td>
         <td class="r">${a ? a.assigned.toLocaleString() : "—"}</td><td style="color:var(--ink-4);letter-spacing:3px">••••</td>
         <td class="r">${a ? `<button class="btn sec sm" data-act="report" data-uid="${u.id}">Report</button> ` : ""}
-          <button class="btn sec sm" data-act="reset" data-uid="${u.id}" data-name="${esc(u.name)}">Reset PIN</button></td></tr>`;
+          <button class="btn sec sm" data-act="reset" data-uid="${u.id}" data-name="${esc(u.name)}">Reset PIN</button>
+          ${u.id !== ME.id ? ` <button class="btn sec sm" data-act="deluser" data-uid="${u.id}" data-name="${esc(u.name)}" style="color:var(--bad)">Delete</button>` : ""}</td></tr>`;
     }).join("") + "</tbody>";
 }
 function openReset(id, nm) { RSTU = id; $("#rstName").textContent = nm; $("#rstPin").value = ""; $("#rstErr").textContent = ""; $("#rstModal").classList.remove("hide"); setTimeout(() => $("#rstPin").focus(), 60); }
@@ -445,30 +480,73 @@ async function addUser() {
   $("#nuMsg").textContent = `${b.name} created.`; $("#nuName").value = ""; $("#nuPin").value = "";
   BOOT = await api("/api/bootstrap"); loadTeam(); toast("Account created");
 }
+async function deleteUser(id, name) {
+  const r = await api("/api/deleteuser", { method: "POST", body: JSON.stringify({ user_id: id }) });
+  if (r.error) { toast("Error: " + r.error, false); return; }
+  BOOT = await api("/api/bootstrap");
+  toast(`${name} deleted`);
+  if (VIEW === "team") loadTeam();
+  if (VIEW === "dash") loadStats();
+}
+async function withdrawAgent(id, name) {
+  const r = await api("/api/withdraw", { method: "POST", body: JSON.stringify({ agent_id: id }) });
+  if (r.error) { toast("Error: " + r.error, false); return; }
+  toast(`Took back ${r.withdrawn} lead${r.withdrawn === 1 ? "" : "s"} from ${name}`);
+  $("#repModal").classList.add("hide");
+  if (VIEW === "dash") loadStats();
+  if (VIEW === "team") loadTeam();
+}
+
+/* ---- settings (business timezone) ---- */
+async function loadSettings() {
+  const d = await api("/api/settings"); if (d.error) return;
+  $("#setTz").innerHTML = d.zones.map(z => `<option value="${esc(z.key)}" ${z.key === d.tz ? "selected" : ""}>${esc(z.label)}</option>`).join("");
+  $("#tzMsg").textContent = "";
+  renderTzInfo();
+}
+function renderTzInfo() {
+  const t = (BOOT && BOOT.time) || {};
+  let nowStr = "—";
+  try { nowStr = new Intl.DateTimeFormat("en-US", { timeZone: t.tz || "UTC", dateStyle: "full", timeStyle: "medium" }).format(new Date(accurateNow())); } catch (e) {}
+  $("#tzInfo").innerHTML = `<dl class="kv">
+    <dt>Business timezone</dt><dd>${esc(t.tz || "?")}</dd>
+    <dt>Current time there</dt><dd>${esc(nowStr)}</dd>
+    <dt>Time source</dt><dd>${t.verified ? "Internet-verified" : "PC clock (not verified)"}</dd></dl>`;
+}
+async function saveTz() {
+  const tz = $("#setTz").value;
+  const r = await api("/api/settings", { method: "POST", body: JSON.stringify({ tz }) });
+  if (r.error) { $("#tzMsg").textContent = "Error: " + r.error; return; }
+  toast("Timezone saved — refreshing");
+  setTimeout(() => location.reload(), 700);
+}
 
 /* ---- leads ---- */
 async function load() {
   const q = $("#q").value.trim();
   const day = (FUMODE || q) ? "" : ($("#fDate").value || "");
   const p = new URLSearchParams({ scope: $("#fScope").value, status: $("#fStatus").value, bucket: $("#fBucket").value,
-    format: $("#fFormat").value, q: q, day: day, followup: FUMODE ? "due" : "", fresh: $("#fFresh").checked ? "1" : "", limit: 300 });
+    format: $("#fFormat").value, q: q, day: day, followup: FUMODE ? "any" : "", fresh: $("#fFresh").checked ? "1" : "", limit: 300 });
   const d = await api("/api/leads?" + p); if (d.error) return;
   ROWS = d.rows; TOTAL = d.total; DAYSHOWN = day; renderRows();
   $("#searchHint").classList.toggle("hide", !(q && $("#fDate").value && !FUMODE));
 }
+function fuClass(d) { d = (d || "").trim(); if (!d) return ""; const t = localToday(); return d < t ? "fu-over" : (d === t ? "fu-today" : ""); }
 function renderRows() {
+  const admin = ME.role === "admin";
+  const cols = 5 + (FUMODE ? 1 : 0) + (admin ? 1 : 0);
   $("#count").textContent = `${ROWS.length} of ${TOTAL.toLocaleString()}` + (DAYSHOWN ? ` · assigned ${dayLabel(DAYSHOWN)}` : "");
   $("#tbl").innerHTML = "<thead><tr><th>Company</th><th>State</th><th class='r'>Trucks</th><th class='r'>Age</th><th>Status</th>" +
-    (ME.role === "admin" ? "<th>Agent</th>" : "") + "</tr></thead><tbody>" +
+    (FUMODE ? "<th class='r'>Follow-up</th>" : "") + (admin ? "<th>Agent</th>" : "") + "</tr></thead><tbody>" +
     (ROWS.length ? ROWS.map((r, i) => `<tr data-act="sel" data-idx="${i}" id="r${i}">
       <td class="co"><b>${esc(r.legal_name)}</b><span class="s">${esc(r.city)} · ${esc(r.docket)}</span></td>
       <td>${esc(r.state)}</td><td class="r">${esc(r.power_units)}</td>
       <td class="r">${r.age == null ? "—" : (r.age <= 7 ? '<span class="freshdot"></span>' : "") + r.age + "d"}</td>
-      <td>${pill(r.status)}</td>${ME.role === "admin" ? `<td>${esc(r.agent || "—")}</td>` : ""}</tr>`).join("")
-      : `<tr><td colspan="6" class="empty">${emptyMsg(DAYSHOWN)}</td></tr>`) + "</tbody>";
+      <td>${pill(r.status)}</td>${FUMODE ? `<td class="r ${fuClass(r.next_followup)}">${esc((r.next_followup || "").trim() || "—")}</td>` : ""}${admin ? `<td>${esc(r.agent || "—")}</td>` : ""}</tr>`).join("")
+      : `<tr><td colspan="${cols}" class="empty">${emptyMsg(DAYSHOWN)}</td></tr>`) + "</tbody>";
 }
 function matchesFilters(l) {
-  if (FUMODE) { const f = (l.next_followup || "").trim(); if (!f || f > localToday()) return false; }
+  if (FUMODE) { const f = (l.next_followup || "").trim(); if (!f) return false; }
   const st = $("#fStatus").value; if (st && (l.status || "") !== st) return false;
   const bk = $("#fBucket").value; if (bk && (l.bucket || "") !== bk) return false;
   const fm = $("#fFormat").value; if (fm && String(l.number_format || "").toUpperCase() !== fm) return false;
@@ -484,7 +562,7 @@ function sel(i) {
     <div class="dial">
       ${p ? `<a href="rcapp://r/call?number=${esc(p)}"><svg><use href="#ic-phone"/></svg>${esc(r.phone)}</a>` : ""}
       ${c ? `<a class="c2" href="rcapp://r/call?number=${esc(c)}"><svg><use href="#ic-mobile"/></svg>${esc(r.cell)}</a>` : ""}</div>
-    ${localTimeBox(r.state)}
+    ${localTimeBox(r.zip, r.state)}
     ${r.email ? `<a class="mailto" target="_blank" rel="noopener" href="https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(r.email)}"><svg class="i sm"><use href="#ic-mail"/></svg>${esc(r.email)}</a>` : ""}
     <dl class="kv">
       <dt>USDOT</dt><dd>${esc(r.usdot)}</dd>
@@ -558,7 +636,14 @@ async function save() {
 }
 
 /* ---- date helpers ---- */
-function localToday() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
+function localToday() {
+  try {
+    return new Intl.DateTimeFormat("en-CA", { timeZone: bizTZ(), year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(accurateNow()));
+  } catch (e) {
+    const d = new Date(accurateNow());
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
+}
 function dayLabel(ymd) { const [y, m, d] = ymd.split("-"); return `${d}-${m}-${y.slice(2)}`; }
 function dateToday() { $("#fDate").value = localToday(); load(); }
 function dateShift(n) {
@@ -566,7 +651,7 @@ function dateShift(n) {
   $("#fDate").value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; load();
 }
 function emptyMsg(day) {
-  if (FUMODE) return `Nothing is due. Every callback you promised is done.`;
+  if (FUMODE) return `No follow-ups scheduled. Set a follow-up date on a lead and it appears here.`;
   if (!day) return "No leads match these filters.";
   const isToday = day === localToday();
   return `Nothing was assigned to you on <b>${dayLabel(day)}</b>${isToday ? " yet" : ""}.`;
@@ -599,6 +684,7 @@ on("#btnLogout", "click", logout);
 on("#btnPin", "click", openPin);
 on("#btnTheme", "click", toggleTheme);
 on("#btnText", "click", cycleText);
+on("#btnSaveTz", "click", saveTz);
 on("#btnRefresh", "click", refresh);
 on("#btnAssign", "click", doAssign);
 on("#btnSync", "click", doSync);
@@ -613,6 +699,8 @@ on("#btnCancelPin", "click", () => $("#pinModal").classList.add("hide"));
 on("#btnSaveReset", "click", saveReset);
 on("#btnCancelReset", "click", () => $("#rstModal").classList.add("hide"));
 on("#btnCloseReport", "click", () => $("#repModal").classList.add("hide"));
+on("#cfYes", "click", () => { $("#confirmModal").classList.add("hide"); const cb = CF_CB; CF_CB = null; if (cb) cb(); });
+on("#cfNo", "click", () => { $("#confirmModal").classList.add("hide"); CF_CB = null; });
 on("#bkPick", "change", bucketDetail);
 on("#cmdk", "click", () => { if (ME) { go("leads"); setTimeout(() => $("#q").focus(), 30); } });
 ["fStatus", "fScope", "fFresh", "fBucket", "fDate", "fFormat"].forEach(id => on("#" + id, "change", load));
@@ -640,4 +728,6 @@ document.addEventListener("click", e => {
   else if (a === "days") openDays(D.arg || D.month);
   else if (a === "day") openDay(D.arg || D.day);
   else if (a === "dayleads") openDayLeads(D.day, +D.agent);
+  else if (a === "deluser") confirmAction("Delete user", `Delete "${D.name}"? Their assigned leads go back to the unassigned pool. This cannot be undone.`, () => deleteUser(+D.uid, D.name));
+  else if (a === "withdraw") confirmAction("Take back leads", `Take all assigned leads back from "${D.name}" and return them to the unassigned pool?`, () => withdrawAgent(+D.uid, D.name));
 });

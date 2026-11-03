@@ -54,6 +54,11 @@ CREATE TABLE IF NOT EXISTS call_log (
 CREATE INDEX IF NOT EXISTS ix_call_lead ON call_log(lead_id, id DESC);
 CREATE INDEX IF NOT EXISTS ix_call_who  ON call_log(who, ts DESC);
 CREATE INDEX IF NOT EXISTS ix_followup  ON leads(next_followup);
+
+CREATE TABLE IF NOT EXISTS settings (
+  key TEXT PRIMARY KEY,
+  value TEXT
+);
 """
 
 _initialised = False

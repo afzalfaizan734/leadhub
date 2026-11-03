@@ -12,9 +12,9 @@ import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-from . import config, security
+from . import clock, config, security
 from .repositories import (ActivityRepository, CallLogRepository, LeadRepository,
-                           UserRepository)
+                           SettingsRepository, UserRepository)
 from .services import (AccountService, AssignmentService, AuthError, CalendarService,
                        LeadService, ReportService, SeedService, SyncService)
 
@@ -27,6 +27,7 @@ class Container:
         self.leads = LeadRepository()
         self.activity = ActivityRepository()
         self.calls = CallLogRepository()
+        self.settings = SettingsRepository()
         self.sessions = security.SessionStore()
         self.lockout = security.LockoutPolicy()
         self.accounts = AccountService(self.users, self.sessions, self.lockout)
@@ -162,7 +163,8 @@ def build_handler(app: Container):
                             "public_login": config.PUBLIC_LOGIN,
                             "demo": config.DEMO,
                             "demo_login": ({"name": "Ava Chen", "pin": config.DEMO_PIN}
-                                           if config.DEMO else None)}
+                                           if config.DEMO else None),
+                            "time": clock.info()}
                     # Only expose the user roster on the trusted-LAN login flow.
                     if not config.PUBLIC_LOGIN:
                         boot["users"] = app.users.all_active()
@@ -204,6 +206,11 @@ def build_handler(app: Container):
                 if p == "/api/activity":
                     self._admin()
                     return self._send({"rows": app.activity.recent()})
+                if p == "/api/settings":
+                    self._admin()
+                    return self._send({"tz": clock.business_tz(),
+                                       "zones": [{"key": k, "label": clock.ZONE_LABELS[k]}
+                                                 for k in clock.US_ZONES]})
             except AuthError as e:
                 return self._send({"error": str(e)}, e.code)
             except (ValueError, KeyError):
@@ -270,11 +277,32 @@ def build_handler(app: Container):
                     actor = self._admin()
                     return self._send(app.assignment.unassign(actor,
                                                               self._body().get("ids", [])))
+                if p == "/api/withdraw":
+                    actor = self._admin()
+                    d = self._body()
+                    return self._send(app.assignment.withdraw_all(actor, int(d["agent_id"])))
+                if p == "/api/deleteuser":
+                    actor = self._admin()
+                    d = self._body()
+                    target = int(d["user_id"])
+                    if actor["id"] == target:
+                        raise AuthError("You cannot delete your own account.", 400)
+                    app.assignment.withdraw_all(actor, target)   # option A: leads back to pool
+                    name = app.accounts.delete_user(actor, target)
+                    return self._send({"ok": True, "name": name})
                 if p == "/api/sync":
                     self._admin()
                     d = self._body()
                     app.sync.start(d.get("days", 14), d.get("format"))
                     return self._send({"ok": True, "started": True})
+                if p == "/api/settings":
+                    self._admin()
+                    d = self._body()
+                    tz = (d.get("tz") or "").strip()
+                    if not clock.set_business_tz(tz):
+                        raise AuthError("Unknown timezone.", 400)
+                    app.settings.set("business_tz", tz)
+                    return self._send({"ok": True, "tz": tz})
             except AuthError as e:
                 return self._send({"error": str(e)}, e.code)
             except (ValueError, KeyError):
