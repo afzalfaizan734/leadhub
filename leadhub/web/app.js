@@ -54,6 +54,17 @@ function e164(p) {
   return d.length >= 11 ? "+" + d : "";
 }
 
+/* ---- dialer (admin-chosen, server-stored; applies to every agent) ---- */
+function dialerKey() { return (BOOT && BOOT.dialer) || "ringcentral"; }
+function dialHref(num) {              // num is already E.164, e.g. +15551234567
+  switch (dialerKey()) {
+    case "googlevoice": return "https://voice.google.com/u/0/calls?a=nc," + encodeURIComponent(num);
+    case "tel":         return "tel:" + num;
+    default:            return "rcapp://r/call?number=" + num;   // RingCentral (unchanged)
+  }
+}
+function dialExtra() { return dialerKey() === "googlevoice" ? ' target="_blank" rel="noopener"' : ""; }
+
 /* ---- carrier local-time (TCPA window 8am-9pm) ---- */
 const TZ = {
   CT: "America/New_York", DE: "America/New_York", FL: "America/New_York", GA: "America/New_York",
@@ -502,7 +513,18 @@ async function loadSettings() {
   const d = await api("/api/settings"); if (d.error) return;
   $("#setTz").innerHTML = d.zones.map(z => `<option value="${esc(z.key)}" ${z.key === d.tz ? "selected" : ""}>${esc(z.label)}</option>`).join("");
   $("#tzMsg").textContent = "";
+  if (d.dialers) {
+    $("#setDialer").innerHTML = d.dialers.map(x => `<option value="${esc(x.key)}" ${x.key === d.dialer ? "selected" : ""}>${esc(x.label)}</option>`).join("");
+    $("#dialerMsg").textContent = "";
+  }
   renderTzInfo();
+}
+async function saveDialer() {
+  const dialer = $("#setDialer").value;
+  const r = await api("/api/settings", { method: "POST", body: JSON.stringify({ dialer }) });
+  if (r.error) { $("#dialerMsg").textContent = "Error: " + r.error; return; }
+  toast("Dialer saved — refreshing");
+  setTimeout(() => location.reload(), 700);
 }
 function renderTzInfo() {
   const t = (BOOT && BOOT.time) || {};
@@ -560,8 +582,8 @@ function sel(i) {
   const bkLabel = r.bucket ? ((BOOT.buckets.find(b => b.key === r.bucket) || {}).label || r.bucket) : "";
   $("#detailIn").innerHTML = `
     <div class="dial">
-      ${p ? `<a href="rcapp://r/call?number=${esc(p)}"><svg><use href="#ic-phone"/></svg>${esc(r.phone)}</a>` : ""}
-      ${c ? `<a class="c2" href="rcapp://r/call?number=${esc(c)}"><svg><use href="#ic-mobile"/></svg>${esc(r.cell)}</a>` : ""}</div>
+      ${p ? `<a href="${dialHref(p)}"${dialExtra()}><svg><use href="#ic-phone"/></svg>${esc(r.phone)}</a>` : ""}
+      ${c ? `<a class="c2" href="${dialHref(c)}"${dialExtra()}><svg><use href="#ic-mobile"/></svg>${esc(r.cell)}</a>` : ""}</div>
     ${localTimeBox(r.zip, r.state)}
     ${r.email ? `<a class="mailto" target="_blank" rel="noopener" href="https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(r.email)}"><svg class="i sm"><use href="#ic-mail"/></svg>${esc(r.email)}</a>` : ""}
     <dl class="kv">
@@ -685,6 +707,7 @@ on("#btnPin", "click", openPin);
 on("#btnTheme", "click", toggleTheme);
 on("#btnText", "click", cycleText);
 on("#btnSaveTz", "click", saveTz);
+on("#btnSaveDialer", "click", saveDialer);
 on("#btnRefresh", "click", refresh);
 on("#btnAssign", "click", doAssign);
 on("#btnSync", "click", doSync);

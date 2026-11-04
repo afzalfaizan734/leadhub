@@ -495,9 +495,18 @@ class SyncService:
                 self._set(running=False, pct=100, at=now(), msg="Nothing new at FMCSA.")
                 return
 
+            def stage(lo, hi, verb):
+                """Build a progress callback that moves the bar from lo->hi and
+                shows a live count, so a long lookup never looks frozen."""
+                def cb(done, total):
+                    p = lo + int((hi - lo) * done / total) if total else hi
+                    self._set(pct=p, msg=f"{verb} ({done:,} of {total:,})...")
+                return cb
+
             have = self.leads.existing_usdots()
             self._set(pct=35, msg="Fetching carrier records...")
-            carriers = self.client.carriers(active.keys())
+            carriers = self.client.carriers(
+                active.keys(), progress=stage(35, 54, "Fetching carrier records"))
 
             fresh, skipped_fmt = {}, 0
             for docket, rec in carriers.items():
@@ -523,11 +532,15 @@ class SyncService:
                 return
 
             dots = list(fresh)
-            census = self.client.census(dots)
+            census = self.client.census(
+                dots, progress=stage(56, 74, "Enriching company details"))
             self._set(pct=75, msg="Looking up email addresses...")
-            emails = self.client.emails(dots)
+            emails = self.client.emails(
+                dots, progress=stage(76, 87, "Looking up email addresses"))
             self._set(pct=88, msg="Checking insurance filings...")
-            insurance = self.client.insurance([v[0] for v in fresh.values()])
+            insurance = self.client.insurance(
+                [v[0] for v in fresh.values()],
+                progress=stage(89, 98, "Checking insurance filings"))
 
             rows = [r for r in (self._to_row(d, dk, rec, census, emails, insurance)
                                 for d, (dk, rec) in fresh.items()) if r]

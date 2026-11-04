@@ -101,6 +101,19 @@ DISPOSITIONS = ["", "Left Voicemail", "No Answer", "Wrong Number", "Busy - Call 
                 "Follow-Up Scheduled", "Not Interested", "Do Not Call", "Signed"]
 ROLES = ("admin", "agent")
 
+# ----------------------------------------------------------------- dialer
+# How the green call button places a call. The admin picks one in Settings; it
+# is stored in the settings table and applies to every agent after a refresh.
+# "ringcentral" is the default, so existing behaviour is UNCHANGED until the
+# admin deliberately switches it.
+DIALERS = [
+    {"key": "ringcentral", "label": "RingCentral (desktop app)"},
+    {"key": "googlevoice", "label": "Google Voice (app / browser tab)"},
+    {"key": "tel",         "label": "Plain phone / softphone (tel:)"},
+]
+DIALER_KEYS = [d["key"] for d in DIALERS]
+DEFAULT_DIALER = "ringcentral"
+
 EDITABLE_LEAD_FIELDS = {"status", "disposition", "notes",
                         "last_contact", "next_followup", "call_attempts"}
 
