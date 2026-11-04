@@ -25,7 +25,7 @@ class UserRepository:
     def all_active(self):
         with database.connect() as c:
             return [dict(r) for r in c.execute(
-                "SELECT id,name,role FROM users WHERE active=1 ORDER BY role DESC,name")]
+                "SELECT id,name,role,dialer FROM users WHERE active=1 ORDER BY role DESC,name")]
 
     def by_name(self, name):
         with database.connect() as c:
@@ -47,6 +47,13 @@ class UserRepository:
         salt, digest = security.new_pin_material(pin)
         with database.connect() as c:
             c.execute("UPDATE users SET pin_salt=?,pin_hash=? WHERE id=?", (salt, digest, uid))
+            c.commit()
+
+    def set_dialer(self, uid, dialer):
+        """Per-agent call-button dialer. None/'' clears it, so that agent falls
+        back to the company-wide default (never breaks the existing behaviour)."""
+        with database.connect() as c:
+            c.execute("UPDATE users SET dialer=? WHERE id=?", (dialer or None, uid))
             c.commit()
 
     def without_pin(self):

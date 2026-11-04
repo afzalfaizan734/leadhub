@@ -88,7 +88,7 @@ def initialise():
 def _migrate(c):
     """Additive only - never drops or rewrites existing columns or rows."""
     cols = {r["name"] for r in c.execute("PRAGMA table_info(users)")}
-    for col in ("pin_hash", "pin_salt", "created_at", "last_login"):
+    for col in ("pin_hash", "pin_salt", "created_at", "last_login", "dialer"):
         if col not in cols:
             c.execute(f"ALTER TABLE users ADD COLUMN {col} TEXT")
     lead_cols = {r["name"] for r in c.execute("PRAGMA table_info(leads)")}

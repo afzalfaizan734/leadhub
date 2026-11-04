@@ -109,6 +109,7 @@ ROLES = ("admin", "agent")
 DIALERS = [
     {"key": "ringcentral", "label": "RingCentral (desktop app)"},
     {"key": "googlevoice", "label": "Google Voice (app / browser tab)"},
+    {"key": "openphone",   "label": "OpenPhone (desktop app / tel:)"},
     {"key": "tel",         "label": "Plain phone / softphone (tel:)"},
 ]
 DIALER_KEYS = [d["key"] for d in DIALERS]

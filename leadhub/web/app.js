@@ -59,6 +59,7 @@ function dialerKey() { return (BOOT && BOOT.dialer) || "ringcentral"; }
 function dialHref(num) {              // num is already E.164, e.g. +15551234567
   switch (dialerKey()) {
     case "googlevoice": return "https://voice.google.com/u/0/calls?a=nc," + encodeURIComponent(num);
+    case "openphone":   return "tel:" + num;   // OpenPhone registers as the tel: handler
     case "tel":         return "tel:" + num;
     default:            return "rcapp://r/call?number=" + num;   // RingCentral (unchanged)
   }
@@ -464,13 +465,27 @@ async function pollSync() {
 }
 
 /* ---- team ---- */
+function dialerSelect(u) {
+  const cur = u.dialer || "";                       // "" = uses the company default
+  const opts = [`<option value="" ${cur === "" ? "selected" : ""}>Default (company)</option>`]
+    .concat((BOOT.dialers || []).map(x =>
+      `<option value="${esc(x.key)}" ${x.key === cur ? "selected" : ""}>${esc(x.label)}</option>`));
+  return `<select class="inp sm" data-dialer-for="${u.id}" style="min-width:210px">${opts.join("")}</select>`;
+}
+async function setAgentDialer(uid, dialer) {
+  const r = await api("/api/setdialer", { method: "POST", body: JSON.stringify({ user_id: uid, dialer }) });
+  if (r.error) { toast("Error: " + r.error, false); return; }
+  const u = (BOOT.users || []).find(x => x.id === uid); if (u) u.dialer = dialer || null;
+  toast("Call button updated for that agent");
+}
 async function loadTeam() {
   const s = await api("/api/stats"); if (s.error) return;
-  $("#teamTbl").innerHTML = "<thead><tr><th>Name</th><th>Role</th><th class='r'>Assigned</th><th>PIN</th><th></th></tr></thead><tbody>" +
+  $("#teamTbl").innerHTML = "<thead><tr><th>Name</th><th>Role</th><th class='r'>Assigned</th><th>PIN</th><th>Call button</th><th></th></tr></thead><tbody>" +
     (BOOT.users || []).map(u => {
       const a = s.agents.find(x => x.id === u.id);
       return `<tr><td class="co"><b>${esc(u.name)}</b></td><td><span class="tag">${esc(u.role)}</span></td>
         <td class="r">${a ? a.assigned.toLocaleString() : "—"}</td><td style="color:var(--ink-4);letter-spacing:3px">••••</td>
+        <td>${dialerSelect(u)}</td>
         <td class="r">${a ? `<button class="btn sec sm" data-act="report" data-uid="${u.id}">Report</button> ` : ""}
           <button class="btn sec sm" data-act="reset" data-uid="${u.id}" data-name="${esc(u.name)}">Reset PIN</button>
           ${u.id !== ME.id ? ` <button class="btn sec sm" data-act="deluser" data-uid="${u.id}" data-name="${esc(u.name)}" style="color:var(--bad)">Delete</button>` : ""}</td></tr>`;
@@ -753,4 +768,8 @@ document.addEventListener("click", e => {
   else if (a === "dayleads") openDayLeads(D.day, +D.agent);
   else if (a === "deluser") confirmAction("Delete user", `Delete "${D.name}"? Their assigned leads go back to the unassigned pool. This cannot be undone.`, () => deleteUser(+D.uid, D.name));
   else if (a === "withdraw") confirmAction("Take back leads", `Take all assigned leads back from "${D.name}" and return them to the unassigned pool?`, () => withdrawAgent(+D.uid, D.name));
+});
+document.addEventListener("change", e => {
+  const sel = e.target.closest("select[data-dialer-for]");
+  if (sel) setAgentDialer(+sel.dataset.dialerFor, sel.value);
 });

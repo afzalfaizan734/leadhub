@@ -165,7 +165,17 @@ def build_handler(app: Container):
                             "demo_login": ({"name": "Ava Chen", "pin": config.DEMO_PIN}
                                            if config.DEMO else None),
                             "time": clock.info(),
-                            "dialer": app.settings.get("dialer", config.DEFAULT_DIALER)}
+                            "dialer": app.settings.get("dialer", config.DEFAULT_DIALER),
+                            "dialers": config.DIALERS}
+                    # The call button uses the EFFECTIVE dialer: this agent's own
+                    # choice if an admin set one, otherwise the company default.
+                    # Agents with none set keep the existing behaviour unchanged.
+                    sess = app.sessions.get(self.headers.get("X-Token"))
+                    if sess:
+                        urow = app.users.by_id(sess["id"])
+                        own = (urow["dialer"] if urow and "dialer" in urow.keys() else None)
+                        if own:
+                            boot["dialer"] = own
                     # Only expose the user roster on the trusted-LAN login flow.
                     if not config.PUBLIC_LOGIN:
                         boot["users"] = app.users.all_active()
@@ -299,6 +309,16 @@ def build_handler(app: Container):
                     d = self._body()
                     app.sync.start(d.get("days", 14), d.get("format"))
                     return self._send({"ok": True, "started": True})
+                if p == "/api/setdialer":
+                    self._admin()
+                    d = self._body()
+                    uid = int(d["user_id"])
+                    dialer = (d.get("dialer") or "").strip()
+                    # Empty string = clear the override (fall back to company default).
+                    if dialer and dialer not in config.DIALER_KEYS:
+                        raise AuthError("Unknown dialer.", 400)
+                    app.users.set_dialer(uid, dialer)
+                    return self._send({"ok": True, "user_id": uid, "dialer": dialer})
                 if p == "/api/settings":
                     self._admin()
                     d = self._body()
